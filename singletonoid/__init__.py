@@ -1,2 +1,2 @@
-from fastapi_singleton.__version__ import __version__
-from fastapi_singleton.singleton_dependency import singleton_dependency
+from singletonoid.__version__ import __version__
+from singletonoid.singleton_dependency import singleton_dependency

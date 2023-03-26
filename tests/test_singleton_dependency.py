@@ -2,7 +2,8 @@ import pytest
 from fastapi import FastAPI, Depends
 from pydantic import BaseSettings
 from fastapi.testclient import TestClient
-from fastapi_singleton import singleton_dependency
+from singletonoid.singleton_dependency import singleton_dependency
+from singletonoid.helpers.fastapi import register_dep
 
 
 DEPENDENCY_VALUE = "DEPENDENCY_VALUE"
@@ -84,7 +85,7 @@ def dep(app, settings, request):
     def handle_test(d=Depends(dep)):
         return d
 
-    dep.register(app, settings)
+    register_dep(dep, app, settings)
 
     return dep
 

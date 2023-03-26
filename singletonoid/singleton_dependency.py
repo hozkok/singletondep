@@ -33,13 +33,21 @@ Examples:
         return app
 """
 
+from enum import Enum
 from typing import (
     Callable,
     AsyncGenerator,
+    Generic,
+    Literal,
+    TypeAlias,
     Union,
     Any,
     Generator,
     ParamSpec,
+    TypeVar,
+    cast,
+    overload,
+    Awaitable,
 )
 from inspect import (
     isgeneratorfunction,
@@ -48,71 +56,81 @@ from inspect import (
     isasyncgen,
 )
 
-from fastapi import FastAPI
-from pydantic import BaseSettings
-
 
 # sentinel object for uninitialized dependency
-UNINITIALIZED = object()
+class _Sentinel(Enum):
+    UNINITIALIZED = "UNINITIALIZED"
 
 
-class singleton_dependency:
+UNINITIALIZED = _Sentinel.UNINITIALIZED
 
-    def __init__(self, fn: Callable[[BaseSettings], Any]):
+Uninitialized: TypeAlias = Literal[_Sentinel.UNINITIALIZED]
+Params = ParamSpec("Params")
+T = TypeVar("T")
+
+
+class singleton_dependency(Generic[Params, T]):
+    @overload
+    def __init__(self, fn: Callable[Params, AsyncGenerator[T, None]]):
+        ...
+
+    @overload
+    def __init__(self, fn: Callable[Params, Awaitable[T]]):
+        ...
+
+    @overload
+    def __init__(self, fn: Callable[Params, Generator[T, None, None]]):
+        ...
+
+    @overload
+    def __init__(self, fn: Callable[Params, T]):
+        ...
+
+    def __init__(self, fn: Callable[Params, Any]):
         self.fn = fn
-        self._value = UNINITIALIZED
+        self._value: Uninitialized | T = UNINITIALIZED
+        self._dirty_generator: Generator | AsyncGenerator | None = None
 
-    def __call__(self) -> Any:
+    def __call__(self) -> T:
         value = self._value
         if value is UNINITIALIZED:
             raise RuntimeError(f"dependency {self.fn} is not initialized")
         return value
 
-    def register(self, app: FastAPI, settings: BaseSettings):
-        cleanup = None
+    async def init(self, *args: Params.args, **kwargs: Params.kwargs):
+        fn = self.fn
+        if iscoroutinefunction(fn):
+            value = await fn(*args, **kwargs)
+        elif isasyncgenfunction(fn):
+            async_gen = fn(*args, **kwargs)
+            value = await async_gen.__anext__()
+            self._dirty_generator = async_gen
+        elif isgeneratorfunction(fn):
+            gen = fn(*args, **kwargs)
+            value = next(gen)
+            self._dirty_generator = gen
+        else:
+            value = fn(*args, **kwargs)
+        self._value = value
 
-        @app.on_event("startup")
-        async def _init_dependency():
-            nonlocal cleanup
-            fn = self.fn
-            if iscoroutinefunction(fn):
-                dep_value = await fn(settings)
-            elif isasyncgenfunction(fn):
-                gen = fn(settings)
-                dep_value = await gen.__anext__()
-                cleanup = _create_cleanup(gen)
-            elif isgeneratorfunction(fn):
-                gen = fn(settings)
-                dep_value = next(gen)
-                cleanup = _create_cleanup(gen)
-            else:
-                dep_value = fn(settings)
-            self._value = dep_value
-
-        @app.on_event("shutdown")
-        async def _clear_dependency():
-            if cleanup is not None:
-                await cleanup()
-            self._value = UNINITIALIZED
-
-
-def _create_cleanup(
-    gen: Union[AsyncGenerator, Generator],
-) -> Callable[[], None]:
-    if isasyncgen(gen):
-        async def cleanup():
-            try:
+    async def cleanup(self):
+        if self._dirty_generator is None:
+            return
+        gen = self._dirty_generator
+        try:
+            if isasyncgen(gen):
+                gen = cast(AsyncGenerator, gen)
                 await gen.__anext__()
-            except StopAsyncIteration:
-                return
             else:
-                raise RuntimeError("Did not cleanup dependency")
-    else:
-        async def cleanup():
-            try:
+                gen = cast(Generator, gen)
                 next(gen)
-            except StopIteration:
-                return
-            else:
-                raise RuntimeError("Did not cleanup dependency")
-    return cleanup
+        except (StopIteration, StopAsyncIteration):
+            return
+        else:
+            raise RuntimeError("Make sure to have a single yield in singletonoid")
+
+    def is_clean(self):
+        """
+        Returns True if dependency is not yet initialized or not require cleanup
+        """
+        return self._dirty_generator is None
