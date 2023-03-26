@@ -79,7 +79,7 @@ def async_generator_dep(ctx):
 def dep(app, settings, request):
 
     dep = request.getfixturevalue(request.param)
-    dep = singleton_dependency(dep)
+    dep = singletondep(dep)
 
     @app.get("/test")
     def handle_test(d=Depends(dep)):
