@@ -1,7 +1,7 @@
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py311
+envlist = py311,py310
 
 [testenv]
 # install pytest in the virtualenv where commands will be executed

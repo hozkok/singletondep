@@ -1,5 +1,5 @@
 """
-Provides fully typed @singleton_dependency decorator for once off dependencies
+Provides fully typed @singletondep decorator for once off dependencies
 life-cycle management.
 """
 from enum import Enum
@@ -24,7 +24,7 @@ from typing import (
     overload,
 )
 
-from singletonoid.errors import (
+from singletondep.errors import (
     AlreadyCleanError,
     AlreadyInitializedError,
     NotInitializedError,
@@ -43,28 +43,26 @@ Params = ParamSpec("Params")
 T = TypeVar("T")
 
 
-class singleton_dependency(Generic[Params, T]):
+class singletondep(Generic[Params, T]):
     """
-    Decorator for managing singleton dependency life-cycles
+    Decorator for managing singleton dependency life-cycles.
+    Supports:
+        - normal functions
+        - coroutine functions
+        - generator functions
+        - async generator functions
     Examples:
-        # without shutdown
-        @singleton_dependency
-        def static_singleton_object(settings: pydantic.BaseSettings):
-            return object()
+        >>> @singletondep
+        >>> async def get_db(db_url: str):
+        >>>     db = await create_db(db_url)
+        >>>     yield db
+        >>>     await db.disconnect()
 
-        # without shutdown async
-        @singleton_dependency
-        async def async_singleton_object(settings: pydantic.BaseSettings):
-            return await create_db(settings.db_url)
-
-        @singleton_dependency
-        async def get_db(db_url: str):
-            db = await create_db(db_url)
-            yield db
-            await db.disconnect()
-
-        async main():
-            await get_db.init("postgres://db_url")
+        >>> async main():
+        >>>     await get_db.init("postgres://db_url")
+        >>>     db = get_db()  # returns the yielded db object
+        >>>     await get_db.cleanup()  # cleans up the connection
+        >>>     db = get_db()  # raises NotInitializedError
     """
     @overload
     def __init__(self, fn: Callable[Params, AsyncGenerator[T, None]]):
@@ -94,6 +92,11 @@ class singleton_dependency(Generic[Params, T]):
         return value
 
     async def init(self, *args: Params.args, **kwargs: Params.kwargs):
+        """
+        Initializes the :class:`singletondep` object. This should be called
+        only once. Raises :class:`AlreadyInitializedError` if called multiple
+        times without `cleanup`.
+        """
         if self._value is not UNINITIALIZED:
             raise AlreadyInitializedError("dependency is already initialized")
         fn = self.fn
@@ -112,6 +115,11 @@ class singleton_dependency(Generic[Params, T]):
         self._value = value
 
     async def cleanup(self):
+        """
+        Cleans the dependency by running the code after yielded value. Only
+        applicable for `Generator` and `AsyncGenerator` types of dependencies.
+        Otherwise raises `AlreadyCleanError` error.
+        """
         if self._dirty_generator is None:
             raise AlreadyCleanError()
         gen = self._dirty_generator

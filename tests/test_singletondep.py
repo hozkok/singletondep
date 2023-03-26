@@ -3,8 +3,8 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseSettings
 
-from singletonoid.helpers.fastapi import register_dep
-from singletonoid.singleton_dependency import singleton_dependency
+from singletondep import singletondep
+from singletondep.helpers.fastapi import register_dep
 
 DEPENDENCY_VALUE = "DEPENDENCY_VALUE"
 
@@ -23,7 +23,7 @@ def app():
 
 
 @pytest.fixture
-def client(app):
+def client(app: FastAPI):
     with TestClient(app) as client:
         yield client
 

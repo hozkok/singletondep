@@ -1,28 +1,25 @@
 from pathlib import Path
-from setuptools import setup, find_packages
 
+from setuptools import find_packages, setup
 
 here = Path(__file__).parent
-
 
 install_requires = [
     "fastapi",
     "pydantic",
 ]
 
-
 tests_require = [
     "pytest",
     "requests",
 ]
 
-
 v = {}
-exec((here / "singletonoid" / "__version__.py").read_text(), v)
+exec((here / "singletondep" / "__version__.py").read_text(), v)
 
 
 setup(
-    name="singletonoid",
+    name="singletondep",
     version=v["__version__"],
     install_requires=install_requires,
     tests_require=tests_require,

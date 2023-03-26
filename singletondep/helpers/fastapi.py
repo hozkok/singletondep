@@ -3,12 +3,12 @@ from typing import Any
 from fastapi import FastAPI
 from pydantic import BaseSettings
 
-from singletonoid.errors import AlreadyCleanError
-from singletonoid.singleton_dependency import singleton_dependency
+from singletondep.errors import AlreadyCleanError
+from singletondep.singletondep import singletondep
 
 
 def register_dep(
-    dep: singleton_dependency[[BaseSettings], Any],
+    dep: singletondep[[BaseSettings], Any],
     app: FastAPI,
     settings: BaseSettings,
 ):
