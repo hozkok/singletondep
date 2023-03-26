@@ -1,7 +1,9 @@
 from typing import Any
+
 from fastapi import FastAPI
 from pydantic import BaseSettings
 
+from singletonoid.errors import AlreadyCleanError
 from singletonoid.singleton_dependency import singleton_dependency
 
 
@@ -15,5 +17,8 @@ def register_dep(
         await dep.init(settings)
 
     @app.on_event("shutdown")
-    async def _clear_dep():
-        await dep.cleanup()
+    async def _clean_dep():
+        try:
+            await dep.cleanup()
+        except AlreadyCleanError:
+            pass

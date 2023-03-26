@@ -1,10 +1,10 @@
 import pytest
-from fastapi import FastAPI, Depends
-from pydantic import BaseSettings
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-from singletonoid.singleton_dependency import singleton_dependency
-from singletonoid.helpers.fastapi import register_dep
+from pydantic import BaseSettings
 
+from singletonoid.helpers.fastapi import register_dep
+from singletonoid.singleton_dependency import singleton_dependency
 
 DEPENDENCY_VALUE = "DEPENDENCY_VALUE"
 

@@ -1,59 +1,33 @@
 """
-Examples:
-    # without shutdown
-    @singleton_dependency
-    def static_singleton_object(settings: pydantic.BaseSettings):
-        return object()
-
-    # without shutdown async
-    @singleton_dependency
-    async def async_singleton_object(settings: pydantic.BaseSettings):
-        return await create_db(settings.db_url)
-
-    # with async shutdown
-    @singleton_dependency
-    async def async_generator(settings: pydantic.BaseSettings):
-        db = await create_db(settings.db_url)
-        yield db
-        await db.disconnect()
-
-    # with sync shutdown
-    @singleton_dependency
-    def sync_generator_dependency(settings: pydantic.BaseSettings):
-        sync_obj = create_sync_object()
-        yield sync_obj
-        sync_obj.shutdown()
-
-    ...
-    def setup_app():
-        app = FastAPI()
-        settings = Settings()
-        for dep in singleton_deps:
-            dep.register(app, settings)
-        return app
+Provides fully typed @singleton_dependency decorator for once off dependencies
+life-cycle management.
 """
-
 from enum import Enum
+from inspect import (
+    isasyncgen,
+    isasyncgenfunction,
+    iscoroutinefunction,
+    isgeneratorfunction,
+)
 from typing import (
-    Callable,
+    Any,
     AsyncGenerator,
+    Awaitable,
+    Callable,
+    Generator,
     Generic,
     Literal,
-    TypeAlias,
-    Union,
-    Any,
-    Generator,
     ParamSpec,
+    TypeAlias,
     TypeVar,
     cast,
     overload,
-    Awaitable,
 )
-from inspect import (
-    isgeneratorfunction,
-    iscoroutinefunction,
-    isasyncgenfunction,
-    isasyncgen,
+
+from singletonoid.errors import (
+    AlreadyCleanError,
+    AlreadyInitializedError,
+    NotInitializedError,
 )
 
 
@@ -70,6 +44,28 @@ T = TypeVar("T")
 
 
 class singleton_dependency(Generic[Params, T]):
+    """
+    Decorator for managing singleton dependency life-cycles
+    Examples:
+        # without shutdown
+        @singleton_dependency
+        def static_singleton_object(settings: pydantic.BaseSettings):
+            return object()
+
+        # without shutdown async
+        @singleton_dependency
+        async def async_singleton_object(settings: pydantic.BaseSettings):
+            return await create_db(settings.db_url)
+
+        @singleton_dependency
+        async def get_db(db_url: str):
+            db = await create_db(db_url)
+            yield db
+            await db.disconnect()
+
+        async main():
+            await get_db.init("postgres://db_url")
+    """
     @overload
     def __init__(self, fn: Callable[Params, AsyncGenerator[T, None]]):
         ...
@@ -94,10 +90,12 @@ class singleton_dependency(Generic[Params, T]):
     def __call__(self) -> T:
         value = self._value
         if value is UNINITIALIZED:
-            raise RuntimeError(f"dependency {self.fn} is not initialized")
+            raise NotInitializedError(f"dependency {self.fn} is not initialized")
         return value
 
     async def init(self, *args: Params.args, **kwargs: Params.kwargs):
+        if self._value is not UNINITIALIZED:
+            raise AlreadyInitializedError("dependency is already initialized")
         fn = self.fn
         if iscoroutinefunction(fn):
             value = await fn(*args, **kwargs)
@@ -115,7 +113,7 @@ class singleton_dependency(Generic[Params, T]):
 
     async def cleanup(self):
         if self._dirty_generator is None:
-            return
+            raise AlreadyCleanError()
         gen = self._dirty_generator
         try:
             if isasyncgen(gen):
@@ -127,10 +125,12 @@ class singleton_dependency(Generic[Params, T]):
         except (StopIteration, StopAsyncIteration):
             return
         else:
-            raise RuntimeError("Make sure to have a single yield in singletonoid")
+            raise TypeError("Make sure to have a single yield in dependency")
+        finally:
+            self._value = UNINITIALIZED
 
     def is_clean(self):
         """
-        Returns True if dependency is not yet initialized or not require cleanup
+        Returns True if dependency does not require `cleanup()`
         """
         return self._dirty_generator is None

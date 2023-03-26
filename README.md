@@ -1,9 +1,11 @@
 Singletonoid
 ----------------------------
 
+Fully typed dependency management library focusing simplicity and flexibility.
+
 ### Requirements
 
-python >= 3.8
+python >= 3.11
 
 ### Installation
 
@@ -13,36 +15,28 @@ pip install singletonoid
 
 ### Usage
 
-from fastapi import FastAPI
-from pydantic import BaseSettings
-from fastapi_singleton import singleton_dependency
-
-
 ```python
+from singletonoid import singleton_dependency
 
-class Settings(BaseSettings):
-    db_url: str
-    
-    
 @singleton_dependency
-async def get_db(settings: Settings):
+async def get_db(db_url: str):
     db = Database(settings.db_url)
     await db.connect()
+    print("connection established")
     yield db
     await db.disconnect()
-    
-
-...
+    print("disconnected from db")
 
 
-def create_app():
-    settings = Settings()
-    app = FastAPI()
-    
-    @app.get("/path")
-    def handle_path(db=Depends(get_db)):
-        data = await db.get_data()
-        return data
-    
-    get_db.register(app, settings)
+async def main():
+    db_url = "localhost/db_name"
+    await get_db.init(db_url)
+    # out: connection established
+    db = get_db()
+    ...
+    await get_db.cleanup()
+    # out: disconnected from db
 ```
+
+
+This library is especially useful for managing singletons in large projects.
