@@ -18,11 +18,11 @@ tests_require = [
 
 
 v = {}
-exec((here / "fastapi_singleton" / "__version__.py").read_text(), v)
+exec((here / "singletonoid" / "__version__.py").read_text(), v)
 
 
 setup(
-    name="fastapi_singleton",
+    name="singletonoid",
     version=v["__version__"],
     install_requires=install_requires,
     tests_require=tests_require,

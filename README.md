@@ -1,4 +1,4 @@
-FastAPI Singleton Dependency
+Singletonoid
 ----------------------------
 
 ### Requirements
@@ -8,7 +8,7 @@ python >= 3.8
 ### Installation
 
 ```sh
-pip install fastapi_singleton
+pip install singletonoid
 ```
 
 ### Usage

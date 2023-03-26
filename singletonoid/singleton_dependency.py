@@ -39,6 +39,7 @@ from typing import (
     Union,
     Any,
     Generator,
+    ParamSpec,
 )
 from inspect import (
     isgeneratorfunction,
@@ -64,7 +65,7 @@ class singleton_dependency:
     def __call__(self) -> Any:
         value = self._value
         if value is UNINITIALIZED:
-            raise RuntimeError("dependency not initialized")
+            raise RuntimeError(f"dependency {self.fn} is not initialized")
         return value
 
     def register(self, app: FastAPI, settings: BaseSettings):
