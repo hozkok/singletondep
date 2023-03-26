@@ -1,5 +1,5 @@
-Singletonoid
-----------------------------
+singletondep
+------------
 
 Fully typed dependency management library focusing simplicity and flexibility.
 
@@ -10,15 +10,15 @@ python >= 3.11
 ### Installation
 
 ```sh
-pip install singletonoid
+pip install singletondep
 ```
 
 ### Usage
 
 ```python
-from singletonoid import singleton_dependency
+from singletondep import singletondep
 
-@singleton_dependency
+@singletondep
 async def get_db(db_url: str):
     db = Database(settings.db_url)
     await db.connect()
@@ -38,5 +38,4 @@ async def main():
     # out: disconnected from db
 ```
 
-
-This library is especially useful for managing singletons in large projects.
+This library can be especially useful to manage dependencies in a large project.
