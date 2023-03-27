@@ -13,6 +13,9 @@ classifiers = [
 ]
 dynamic = ["version", "readme"]
 
+[project.urls]
+Homepage = "https://github.com/hozkok/singletondep"
+
 [project.optional-dependencies]
 fastapi = ["fastapi", "pydantic"]
 
