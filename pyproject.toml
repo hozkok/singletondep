@@ -1,3 +1,33 @@
+[project]
+name = "singletondep"
+description = "simple singleton dependency management"
+# readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["singleton", "dependency"]
+authors = [
+    { name = "Hakan Ozkok" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dynamic = ["version", "readme"]
+
+[project.optional-dependencies]
+fastapi = ["fastapi", "pydantic"]
+
+
+[tool.setuptools.dynamic]
+version = {attr = "singletondep.__version__"}
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["singletondep*"]
+exclude = ["tests*"]
+namespaces = false  # PEP-420 namespaces
+
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]
@@ -7,7 +37,7 @@ envlist = py311,py310
 # install pytest in the virtualenv where commands will be executed
 deps =
     pytest
-    requests
+    fastapi
     httpx
 commands = pytest
 """
