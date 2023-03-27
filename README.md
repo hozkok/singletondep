@@ -3,9 +3,24 @@ singletondep
 
 Fully typed dependency management library focusing simplicity and flexibility.
 
-### Requirements
+## Motivation
 
-python >= 3.11
+This library aims to provide a simple approach to singleton dependency
+management in projects. In modern live systems, there can be many objects that
+are expensive and hard to control background tasks, connections, pools
+life-cycles.
+
+Frameworks either have a very opinionated view on this, or rely on module-level
+defined objects which may require dynamic parameters that are injected during
+application startup. This causes module structures to access global variables
+or importing completely unrelated modules.
+
+This library provides the most powerful and simplest concept to approach
+dependencies via plain old functions.
+
+## Requirements
+
+python >= 3.10
 
 ### Installation
 
@@ -38,4 +53,45 @@ async def main():
     # out: disconnected from db
 ```
 
-This library can be especially useful to manage dependencies in a large project.
+This library can be especially useful to manage dependencies in larger projects.
+
+
+### Using as a FastAPI Dependency
+
+```python
+import os
+
+from fastapi import FastAPI, APIRouter, Depends
+from pydantic import BaseSettings
+from singletondep import singletondep
+from singletondep.ext.fastapi import register_dep
+
+
+class Settings(BaseSettings):
+    url: str
+
+
+@singletondep
+async def get_db(settings: Settings):
+    db = await create_connection(settings.url)
+    print("connected to db")
+    yield db
+    await db.disconnect()
+    print("closed db connections")
+
+
+router = APIRouter()
+
+@router.get("/meaning")
+def get_meaning(db: MyDatabase = Depends(get_db)):
+    meaning = await db.fetch_meaning()
+    return f"the meaning is {meaning}"
+
+
+def create_app() -> FastAPI:
+    app = FastAPI()
+    app.include_router(router)
+    settings = Settings(url=os.environ["url"])
+    register_dep(get_db, app, settings)
+    return app
+```

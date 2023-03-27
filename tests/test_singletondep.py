@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseSettings
 
 from singletondep import singletondep
-from singletondep.helpers.fastapi import register_dep
+from singletondep.ext.fastapi import register_dep
 
 DEPENDENCY_VALUE = "DEPENDENCY_VALUE"
 
