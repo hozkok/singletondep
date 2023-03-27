@@ -13,10 +13,11 @@ life-cycles.
 Frameworks either have a very opinionated view on this, or rely on module-level
 defined objects which may require dynamic parameters that are injected during
 application startup. This causes module structures to access global variables
-or importing completely unrelated modules.
+or importing completely unrelated modules in order to manage singleton
+dependencies lifecycles applying anti-patterns all around.
 
-This library provides the most powerful and simplest concept to approach
-dependencies via plain old functions.
+This library provides a simple approach to this problem by using simple
+abstraction over raw functions.
 
 ## Requirements
 
