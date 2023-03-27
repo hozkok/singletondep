@@ -83,7 +83,7 @@ async def get_db(settings: Settings):
 router = APIRouter()
 
 @router.get("/meaning")
-def get_meaning(db: MyDatabase = Depends(get_db)):
+def get_meaning(db = Depends(get_db)):
     meaning = await db.fetch_meaning()
     return f"the meaning is {meaning}"
 
