@@ -81,3 +81,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 # Assume Python 3.11.
 target-version = "py311"
+
+
+[tool.black]
+line-length = 80

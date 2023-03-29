@@ -21,7 +21,6 @@ from typing import (
     TypeAlias,
     TypeVar,
     cast,
-    overload,
 )
 
 from singletondep.errors import (
@@ -64,23 +63,17 @@ class singletondep(Generic[Params, T]):
         >>>     await get_db.cleanup()  # cleans up the connection
         >>>     db = get_db()  # raises NotInitializedError
     """
-    @overload
-    def __init__(self, fn: Callable[Params, AsyncGenerator[T, None]]):
-        ...
 
-    @overload
-    def __init__(self, fn: Callable[Params, Awaitable[T]]):
-        ...
-
-    @overload
-    def __init__(self, fn: Callable[Params, Generator[T, None, None]]):
-        ...
-
-    @overload
-    def __init__(self, fn: Callable[Params, T]):
-        ...
-
-    def __init__(self, fn: Callable[Params, Any]):
+    def __init__(
+        self,
+        fn: Callable[
+            Params,
+            AsyncGenerator[T, None]
+            | Awaitable[T]
+            | Generator[T, None, None]
+            | T,
+        ],
+    ):
         self.fn = fn
         self._value: Uninitialized | T = UNINITIALIZED
         self._dirty_generator: Generator | AsyncGenerator | None = None
@@ -88,7 +81,9 @@ class singletondep(Generic[Params, T]):
     def __call__(self) -> T:
         value = self._value
         if value is UNINITIALIZED:
-            raise NotInitializedError(f"dependency {self.fn} is not initialized")
+            raise NotInitializedError(
+                f"dependency {self.fn} is not initialized"
+            )
         return value
 
     async def init(self, *args: Params.args, **kwargs: Params.kwargs):
