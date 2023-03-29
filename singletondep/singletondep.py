@@ -76,7 +76,9 @@ class singletondep(Generic[Params, T]):
     ):
         self.fn = fn
         self._value: Uninitialized | T = UNINITIALIZED
-        self._dirty_generator: Generator | AsyncGenerator | None = None
+        self._dirty_generator: (
+            Generator[T, None, None] | AsyncGenerator[T, None] | None
+        ) = None
 
     def __call__(self) -> T:
         value = self._value
@@ -96,24 +98,29 @@ class singletondep(Generic[Params, T]):
             raise AlreadyInitializedError("dependency is already initialized")
         fn = self.fn
         if iscoroutinefunction(fn):
+            fn = cast(Callable[Params, Awaitable[T]], fn)
             value = await fn(*args, **kwargs)
         elif isasyncgenfunction(fn):
+            fn = cast(Callable[Params, AsyncGenerator[T, None]], fn)
             async_gen = fn(*args, **kwargs)
             value = await async_gen.__anext__()
             self._dirty_generator = async_gen
         elif isgeneratorfunction(fn):
+            fn = cast(Callable[Params, Generator[T, None, None]], fn)
             gen = fn(*args, **kwargs)
             value = next(gen)
             self._dirty_generator = gen
         else:
+            fn = cast(Callable[Params, T], fn)
             value = fn(*args, **kwargs)
         self._value = value
 
     async def cleanup(self):
         """
         Cleans the dependency by running the code after yielded value. Only
-        applicable for `Generator` and `AsyncGenerator` types of dependencies.
-        Otherwise raises `AlreadyCleanError` error.
+        applicable for `Generator` and `AsyncGenerator` types of dependencies
+        that are initialized by `init` method. Otherwise raises
+        `AlreadyCleanError` error.
         """
         if self._dirty_generator is None:
             raise AlreadyCleanError()
@@ -131,6 +138,7 @@ class singletondep(Generic[Params, T]):
             raise TypeError("Make sure to have a single yield in dependency")
         finally:
             self._value = UNINITIALIZED
+            self._dirty_generator = None
 
     def is_clean(self):
         """
